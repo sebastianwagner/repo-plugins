@@ -6,17 +6,16 @@ translation = libMediathek.getTranslation
 skipToSeries = libMediathek.getSetting('skipToSeries') == 'true'
 
 def main():
-	if skipToSeries:
-		params['url'] = 'https://api.funk.net/v1.1/content/series/?page=0&size=50'
-		return listDir()
-	else:
-		l = []
-		l.append({'_name':translation(30503,'plugin.video.funkmediathek'), 'mode':'listDir', '_type': 'dir', 'url':'https://api.funk.net/v1.1/content/formats/?page=0&size=50'})
-		l.append({'_name':translation(30504,'plugin.video.funkmediathek'), 'mode':'listDir', '_type': 'dir', 'url':'https://api.funk.net/v1.1/content/series/?page=0&size=50'})
-		return l
+	return jsonParser.parseMain()
 	
-def listDir():
-	return jsonParser.parse(params['url'])
+def listSeasons():
+	return jsonParser.parseSeasons(params['id'])
+	
+def listEpisodes():
+	return jsonParser.parseEpisodes(params['id'])
+	
+def listVideos():
+	return jsonParser.parseVideos(params['id'])
 	
 def play():
 	import nexx
@@ -29,7 +28,9 @@ def play():
 
 modes = {
 'main': main,
-'listDir': listDir,
+'listSeasons': listSeasons,
+'listEpisodes': listEpisodes,
+'listVideos': listVideos,
 'play': play
 }	
 

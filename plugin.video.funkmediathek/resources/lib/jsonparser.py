@@ -1,98 +1,119 @@
 # -*- coding: utf-8 -*-
 import json
 import libmediathek3 as libMediathek
-base = 'https://api.funk.net/v1.1'
+base = 'https://www.funk.net/api/v3.0'
 
-auth = '29ad11c93ad19f816de90c1c8ae4ec0354c6b5e4ec5b3965f125248cfa60bfe1'
 fanart = libMediathek.fanart
-
-header = 	{
-			'Authorization':auth[::-1],
-			'User-Agent':'okhttp/3.2.0',
-			'Accept-Encoding':'gzip',
-			'Host':' api.funk.net',
-			}
 
 types = {
 'format':'formats',
 'series':'series',
 }
 
-def parse(url):
-	response = libMediathek.getUrl(url,header)
+#v3.0
+#auth = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnROYW1lIjoiY3VyYXRpb24tdG9vbCIsInNjb3BlIjoic3RhdGljLWNvbnRlbnQtYXBpLGN1cmF0aW9uLWFwaSxzZWFyY2gtYXBpIn0.q4Y2xZG8PFHai24-4Pjx2gym9RmJejtmK6lMXP5wAgc'
+#v3.1
+auth = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnROYW1lIjoiY3VyYXRpb24tdG9vbC12Mi4wIiwic2NvcGUiOiJzdGF0aWMtY29udGVudC1hcGksY3VyYXRpb24tc2VydmljZSxzZWFyY2gtYXBpIn0.SGCC1IXHLtZYoo8PvRKlU2gXH1su8YSu47sB3S4iXBI'
+
+#auth = 'eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJjbGllbnROYW1lIjoiY3VyYXRpb24tdG9vbCIsInNjb3BlIjoic3RhdGljLWNvbnRlbnQtYXBpLGN1cmF0aW9uLWFwaSxzZWFyY2gtYXBpIn0.'
+#eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnROYW1lIjoiY3VyYXRpb24tdG9vbCIsInNjb3BlIjoic3RhdGljLWNvbnRlbnQtYXBpLGN1cmF0aW9uLWFwaSxzZWFyY2gtYXBpIn0.q4Y2xZG8PFHai24-4Pjx2gym9RmJejtmK6lMXP5wAgc
+#eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjbGllbnROYW1lIjoiY3VyYXRpb24tdG9vbC12Mi4wIiwic2NvcGUiOiJzdGF0aWMtY29udGVudC1hcGksY3VyYXRpb24tc2VydmljZSxzZWFyY2gtYXBpIn0.SGCC1IXHLtZYoo8PvRKlU2gXH1su8YSu47sB3S4iXBI
+header = 	{
+			'Authorization':auth,
+			'Accept-Encoding':'gzip',
+			}
+
+def parseMain():
+	onlySeries = libMediathek.getSetting('skipToSeries') == 'true'
+	response = libMediathek.getUrl(base+'/content/channels/?size=100',header)
 	j = json.loads(response)
 	l = []
-	if 'includes' in j:
-		part = 'includes'
-	else:
-		part = 'data'
-	for item in j[part]:
-		if item['type'] == 'series' or item['type'] == 'format':
-			d = _parseSeries(item,types[item['type']])
-			if d:
+	for item in j['result']:
+		if item['type'] == 'Series' or not onlySeries:
+			try:
+				d = {}
+				d['_name'] = item['title']
+				if 'shortDescription' in item:
+					d['_plot'] = item['shortDescription']
+				if 'description' in item:
+					d['_plot'] = item['description']
+				d['_thumb'] = item['imageUrlSquare']
+				if 'imageUrlOrigin' in item:
+					d['_fanart'] = item['imageUrlOrigin']
+				d['_type'] = 'dir'
+				d['id'] = item['alias']
+				if item['type'] == 'Series':
+					d['mode'] = 'listSeasons'
+				elif item['type'] == 'Format':
+					d['mode'] = 'listVideos'
+				
+					
 				l.append(d)
-		elif item['type'] == 'video':
-			l.append(_parseVideo(item))
-		else:
-			libMediathek.log('unkown type: '+item['type'])
+			except:
+				libMediathek.log(json.dumps(item))
 	return l
 	
-def _parseSeries(j,type):
-	d = {}
-	if 'name' in j['attributes']:
-		if j['attributes']['name'] == 'funk Livestream': return False
-		d['_name'] = j['attributes']['name']
-	else:
-		if j['attributes']['title'] == 'funk Livestream': return False
-		d['_name'] = j['attributes']['title']
-	if 'thumbnail' in j['attributes']:
-		d['_thumb'] = j['attributes']['thumbnail']
-	else:
-		d['_thumb'] = fanart
-	if type == 'series':
-		d['_fanart'] = fanart
-	if 'description' in j['attributes']:
-		d['_plot'] = _cleanPlot(j['attributes']['description'])
-	d['_airedISO8601'] = j['attributes']['createdAt']
-	d['url'] = base + '/content/'+type+'/' + j['id'] + '?should_filter=false'#
-	d['_rating'] = str(j['attributes']['kickKeepRatio'] * 10)
-	d['mode'] = 'listDir'
-	d['_type'] = 'season'
-	return d
-
-def _parseVideo(j):
-	d = {}
-	d['_name'] = j['attributes']['title']
 	
-	d['_thumb'] = j['attributes']['image']['url']
-	if 'text' in j['attributes']:
-		d['_plot'] = _cleanPlot(j['attributes']['text'])
-		while '\n\n\n' in d['_plot']:
-			d['_plot'] = d['_plot'].replace('\n\n\n','\n\n')
-	d['_duration'] = str(j['attributes']['duration'])
-	if 'season' in j['attributes']:
-		d['_season'] = j['attributes']['season']
-	if 'episode' in j['attributes']:
-		d['_episode'] = j['attributes']['episode']
-		d['_type'] = 'episode'
-	else:
+def parseSeasons(id):
+	response = libMediathek.getUrl(base+'/content/playlists/filter/?channelId=' + id + '&secondarySort=alias,ASC',header)
+	j = json.loads(response)
+	l = []
+	for item in j['result']:
+		d = {}
+		d['_name'] = item['title']
+		if 'shortDescription' in item:
+			d['_plot'] = item['shortDescription']
+		if 'description' in item:
+			d['_plot'] = item['description']
+		d['_thumb'] = item['imageUrlPortrait']
+		d['_fanart'] = item['imageUrlOrigin']
+		d['_mpaa'] = str(item['fsk'])
+		#d['_type'] = 'dir'
+		d['_type'] = 'season'
+		d['id'] = item['alias']
+		d['mode'] = 'listEpisodes'
+		l.append(d)
+	return l
+	
+def parseEpisodes(id):
+	response = libMediathek.getUrl(base+'/content/playlists/'+id+'/videos/?size=100&secondarySort=episodeNr,ASC',header)
+	j = json.loads(response)
+	l = []
+	for item in j['result']:
+		d = {}
+		d['_name'] = item['title']
+		if 'shortDescription' in item:
+			d['_plot'] = item['shortDescription']
+		if 'description' in item:
+			d['_plot'] = item['description']
+		d['_thumb'] = item['imageUrlOrigin']
+		d['_duration'] = item['duration']
+		d['_season'] = item['seasonNr']
+		d['_episode'] = item['episodeNr']
+		d['_mpaa'] = 'FSK ' + str(item['fsk'])
 		d['_type'] = 'video'
-	if 'fsk' in j['attributes']:
-		d['_mpaa'] = 'FSK ' + str(j['attributes']['fsk'])
+		d['sourceId'] = item['sourceId']
+		d['mode'] = 'play'
+		l.append(d)
+	return l
 	
-	d['_airedISO8601'] = j['attributes']['createdAt']
-	
-	d['sourceId'] = j['attributes']['sourceId']
-	d['mode'] = 'play'
-	return d
-	
-def _cleanPlot(plot):
-	plot = plot.replace('<p>','')
-	plot = plot.replace('</p>','')
-	plot = plot.replace('<h4>','')
-	plot = plot.replace('</h4>','')
-	while '  ' in plot:
-		plot = plot.replace('  ',' ')
-	#plot = plot.replace('\n ','')
-	return plot
-	
+def parseVideos(id):
+	#https://www.funk.net/api/v3.0/content/videos/filter?channelId=auf-einen-kaffee-mit-moritz-neumeier&page=0&size=20
+	response = libMediathek.getUrl(base+'/content/videos/filter?channelId='+id+'&page=0&size=100',header)
+	j = json.loads(response)
+	l = []
+	for item in j['result']:
+		d = {}
+		d['_name'] = item['title']
+		if 'shortDescription' in item:
+			d['_plot'] = item['shortDescription']
+		if 'description' in item:
+			d['_plot'] = item['description']
+		d['_thumb'] = item['imageUrlOrigin']
+		d['_duration'] = item['duration']
+		d['_mpaa'] = 'FSK ' + str(item['fsk'])
+		d['_type'] = 'video'
+		d['sourceId'] = item['sourceId']
+		d['mode'] = 'play'
+		l.append(d)
+	return l
