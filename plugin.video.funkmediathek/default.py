@@ -19,8 +19,10 @@ def listVideos():
 	
 def play():
 	import nexx
-	nexx.operations = {'byid':'2835669fdcfe2d07351d633353bf87a8'}
-	nexx.cid = '114994613565243649'
+	#nexx.operations = {'byid':'2835669fdcfe2d07351d633353bf87a8'}
+	nexx.operations = {'byid':'f058a27469d8b709c3b9db648cae47c2'}
+	#nexx.cid = '114994613565243649'
+	nexx.cid = '1152923389105252956'
 	nexx.channelId = '741'
 	nexx.origin = 'https://www.funk.net'
 	return nexx.getVideoUrl(params['sourceId'])

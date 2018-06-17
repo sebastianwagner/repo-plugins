@@ -86,12 +86,14 @@ def parseEpisodes(id):
 			d['_plot'] = item['shortDescription']
 		if 'description' in item:
 			d['_plot'] = item['description']
-		d['_thumb'] = item['imageUrlOrigin']
+		#d['_thumb'] = item['imageUrlOrigin']
+		d['_thumb'] = item['imageUrlLandscape']
 		d['_duration'] = item['duration']
-		d['_season'] = item['seasonNr']
-		d['_episode'] = item['episodeNr']
+		d['_season'] = str(item['seasonNr'])
+		d['_episode'] = str(item['episodeNr'])
 		d['_mpaa'] = 'FSK ' + str(item['fsk'])
-		d['_type'] = 'video'
+		d['_type'] = 'episode'
+		#d['_type'] = 'video'
 		d['sourceId'] = item['sourceId']
 		d['mode'] = 'play'
 		l.append(d)
