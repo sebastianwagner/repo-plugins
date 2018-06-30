@@ -58,6 +58,9 @@ def parseSeasons(id):
 	response = libMediathek.getUrl(base+'/content/playlists/filter/?channelId=' + id + '&secondarySort=alias,ASC',header)
 	j = json.loads(response)
 	l = []
+	libMediathek.log(response)
+	fallbackFanart = j['parentResult']['imageUrlLandscape']
+	fallbackThumb = j['parentResult']['imageUrlSquare']
 	for item in j['result']:
 		d = {}
 		d['_name'] = item['title']
@@ -65,8 +68,14 @@ def parseSeasons(id):
 			d['_plot'] = item['shortDescription']
 		if 'description' in item:
 			d['_plot'] = item['description']
-		d['_thumb'] = item['imageUrlPortrait']
-		d['_fanart'] = item['imageUrlOrigin']
+		if 'imageUrlPortrait' in item:
+			d['_thumb'] = item['imageUrlPortrait']
+		else:
+			d['_thumb'] = fallbackThumb
+		if 'imageUrlLandscape' in item:
+			d['_fanart'] = item['imageUrlLandscape']
+		else:
+			d['_fanart'] = fallbackFanart
 		d['_mpaa'] = str(item['fsk'])
 		#d['_type'] = 'dir'
 		d['_type'] = 'season'
