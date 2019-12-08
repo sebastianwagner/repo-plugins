@@ -103,10 +103,18 @@ def parseEpisodes(id):
 		if 'description' in item:
 			d['_plot'] = item['description']
 		d['_duration'] = item['duration']
+		if 'imageLandscape' in item:
+			imgurl = base + '/thumbnails/' + item['imageLandscape'] + '?quality=85&width=244'
+			d['_thumb'] = imgurl
 		if 'seasonNr' in item:
-			d['_season'] = str(item['seasonNr'])
+			# workaround bug in script.module.libmediathek3/lib/libmediathek3listing.py:addEntries():74
+			season = str(item['seasonNr'])
+			d['_Season'] = season
+			d['_season'] = season
 		if 'episodeNr' in item:
 			d['_episode'] = str(item['episodeNr'])
+		if 'fsk' in item:
+			d['_mpaa'] = str(item['fsk'])
 		d['_type'] = 'episode'
 		d['sourceId'] = str(item['entityId'])
 		d['mode'] = 'play'
