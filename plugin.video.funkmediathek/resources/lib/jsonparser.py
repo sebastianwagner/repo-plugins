@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import json
 import libmediathek3 as libMediathek
-base = 'https://www.funk.net/api/v3.1'
+base = 'https://www.funk.net/api/v4.0'
+webbase = 'https://www.funk.net/data/'
 
 fanart = libMediathek.fanart
 
@@ -26,61 +27,60 @@ header = 	{
 
 def parseMain():
 	onlySeries = libMediathek.getSetting('skipToSeries') == 'true'
-	response = libMediathek.getUrl(base+'/content/channels/?size=100',header)
+	response = libMediathek.getUrl(webbase+'/static/channels',False)
 	j = json.loads(response)
 	l = []
-	for item in j['_embedded']['channelModels']:
-		if item['type'] == 'Series' or not onlySeries:
+	for item in j['list']:
+		if not 'type' in item:
+			continue
+		elif item['type'] == 'format' or item['type'] == 'series':
 			try:
 				d = {}
 				d['_name'] = item['title']
+				if 'publicationDate' in item:
+					d['_airedISO8601'] = item['publicationDate']
 				if 'shortDescription' in item:
 					d['_plot'] = item['shortDescription']
 				if 'description' in item:
 					d['_plot'] = item['description']
-				d['_thumb'] = item['imageUrlSquare']
-				if 'imageUrlOrigin' in item:
-					d['_fanart'] = item['imageUrlOrigin']
+				if 'imageSquare' in item:
+					imgurl = base + '/thumbnails/' + item['imageSquare'] + '?quality=85&width=200'
+					d['_thumb'] = imgurl
+				if 'imageOrigin' in item and item['imageOrigin'] != None:
+					imgurl = base + '/thumbnails/' + item['imageOrigin'] + '?quality=85'
+					d['_fanart'] = imgurl
+				else:
+					d['_fanart'] = fanart
 				d['_type'] = 'dir'
 				d['id'] = item['alias']
-				if item['type'] == 'Series':
+				if item['type'] == 'series':
 					d['mode'] = 'listSeasons'
-				elif item['type'] == 'Format':
+				elif item['type'] == 'format':
 					d['mode'] = 'listVideos'
 				
-					
 				l.append(d)
 			except:
 				libMediathek.log(json.dumps(item))
+		elif item['type'] == 'archiveformat':
+			continue
 	return l
 	
 	
 def parseSeasons(id):
 	#response = libMediathek.getUrl(base+'/content/playlists/filter/?channelId=' + id + '&secondarySort=alias,ASC',header)
 	#https://www.funk.net/api/v3.1/webapp/playlists/byChannelAlias/alles-liebe-annette?sort=language,ASC
-	response = libMediathek.getUrl(base+'/webapp/playlists/byChannelAlias/' + id + '?sort=language,ASC',header)
+	url = webbase + 'seasons/byChannelAlias/' + id
+	response = libMediathek.getUrl(url,False)
 	j = json.loads(response)
 	l = []
 	#libMediathek.log(response)
-	fallbackFanart = j['parent']['imageUrlLandscape']
-	fallbackThumb = j['parent']['imageUrlSquare']
-	for item in j['_embedded']['playlistList']:
+	for item in j['list']:
 		d = {}
 		d['_name'] = item['title']
 		if 'shortDescription' in item:
 			d['_plot'] = item['shortDescription']
 		if 'description' in item:
 			d['_plot'] = item['description']
-		if 'imageUrlPortrait' in item:
-			d['_thumb'] = item['imageUrlPortrait']
-		else:
-			d['_thumb'] = fallbackThumb
-		if 'imageUrlLandscape' in item:
-			d['_fanart'] = item['imageUrlLandscape']
-		else:
-			d['_fanart'] = fallbackFanart
-		d['_mpaa'] = str(item['fsk'])
-		#d['_type'] = 'dir'
 		d['_type'] = 'season'
 		d['id'] = item['alias']
 		d['mode'] = 'listEpisodes'
@@ -90,25 +90,25 @@ def parseSeasons(id):
 def parseEpisodes(id):
 	#response = libMediathek.getUrl(base+'/content/playlists/'+id+'/videos/?size=100&secondarySort=episodeNr,ASC',header)
 	#https://www.funk.net/api/v3.1/webapp/videos/byPlaylistAlias/alles-liebe-annette-staffel-1?filterFsk=false&size=100&sort=episodeNr,ASC
-	response = libMediathek.getUrl(base+'/webapp/videos/byPlaylistAlias/'+id+'?filterFsk=false&size=100&sort=episodeNr,ASC',header)
+	url = base+'/webapp/videos/byPlaylistAlias/'+id+'?filterFsk=false&size=100&sort=episodeNr,ASC'
+	url = webbase + 'videos/bySeasonAlias/' + id
+	response = libMediathek.getUrl(url,False)
 	j = json.loads(response)
 	l = []
-	for item in j['_embedded']['videoList']:
+	for item in j['list']:
 		d = {}
 		d['_name'] = item['title']
 		if 'shortDescription' in item:
 			d['_plot'] = item['shortDescription']
 		if 'description' in item:
 			d['_plot'] = item['description']
-		#d['_thumb'] = item['imageUrlOrigin']
-		d['_thumb'] = item['imageUrlLandscape']
 		d['_duration'] = item['duration']
-		d['_season'] = str(item['seasonNr'])
-		d['_episode'] = str(item['episodeNr'])
-		d['_mpaa'] = 'FSK ' + str(item['fsk'])
+		if 'seasonNr' in item:
+			d['_season'] = str(item['seasonNr'])
+		if 'episodeNr' in item:
+			d['_episode'] = str(item['episodeNr'])
 		d['_type'] = 'episode'
-		#d['_type'] = 'video'
-		d['sourceId'] = item['sourceId']
+		d['sourceId'] = str(item['entityId'])
 		d['mode'] = 'play'
 		l.append(d)
 	return l
@@ -118,24 +118,25 @@ def parseVideos(id):
 	#response = libMediathek.getUrl(base+'/content/videos/filter?channelId='+id+'&page=0&size=100',header)
 	#https://www.funk.net/api/v3.1/webapp/playlists/byChannelAlias/auf-einen-kaffee-mit-moritz-neumeier?sort=language,ASC
 	#https://www.funk.net/api/v3.1/webapp/videos/byChannelAlias/auf-einen-kaffee-mit-moritz-neumeier?filterFsk=false&sort=creationDate,desc&page=0&size=20
-	response = libMediathek.getUrl(base+'/webapp/videos/byChannelAlias/'+id+'?filterFsk=false&sort=creationDate,desc&page=0&size=100',header)
+	url = webbase + 'videos/byChannelAlias/'+id
+	response = libMediathek.getUrl(url,False)
 	j = json.loads(response)
 	l = []
-	for item in j['_embedded']['videoList']:
+	for item in j['list']:
 		d = {}
 		d['_name'] = item['title']
 		if 'shortDescription' in item:
 			d['_plot'] = item['shortDescription']
+		if 'publicationDate' in item:
+			d['_airedISO8601'] = item['publicationDate']
 		if 'description' in item:
 			d['_plot'] = item['description']
-		if 'imageUrlOrigin' in item:
-			d['_thumb'] = item['imageUrlOrigin']
-		elif 'imageUrlLandscape' in item:
-			d['_thumb'] = item['imageUrlLandscape']
+		if 'imageLandscape' in item:
+			imgurl = base + '/thumbnails/' + item['imageLandscape'] + '?quality=85&width=244'
+			d['_thumb'] = imgurl
 		d['_duration'] = item['duration']
-		d['_mpaa'] = 'FSK ' + str(item['fsk'])
 		d['_type'] = 'video'
-		d['sourceId'] = item['sourceId']
+		d['sourceId'] = str(item['entityId'])
 		d['mode'] = 'play'
 		l.append(d)
 	return l

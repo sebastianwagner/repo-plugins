@@ -1,3 +1,5 @@
+1.5.0-git
+- Migrate to API 4.0 / webapi
 1.5.0
 - Migrated to API 3.1
 1.4.2
