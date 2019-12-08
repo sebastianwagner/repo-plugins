@@ -30,6 +30,8 @@ def parseMain():
 	response = libMediathek.getUrl(webbase+'/static/channels',False)
 	j = json.loads(response)
 	l = []
+	if not 'list' in j:
+		return l
 	for item in j['list']:
 		if not 'type' in item:
 			continue
@@ -65,6 +67,24 @@ def parseMain():
 				libMediathek.log(json.dumps(item))
 		elif item['type'] == 'archiveformat':
 			continue
+		else:
+			continue
+	for item in j['list']:
+		if 'type' in item and item['type'] == 'archiveformat':
+			d = {}
+			d['_name'] = item['title']
+			if 'imageLandscape' in item:
+				imgurl = base + '/thumbnails/' + item['imageSquare'] + '?quality=85&width=244'
+				d['_thumb'] = imgurl
+			if 'imageOrigin' in item and item['imageOrigin'] != None:
+				imgurl = base + '/thumbnails/' + item['imageOrigin'] + '?quality=85'
+				d['_fanart'] = imgurl
+			else:
+				d['_fanart'] = fanart
+			d['id'] = item['alias']
+			d['_type'] = 'dir'
+			d['mode'] = 'listVideos'
+			l.append(d)
 	return l
 	
 	
