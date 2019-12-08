@@ -55,6 +55,8 @@ def parseMain():
 				d['id'] = item['alias']
 				if item['type'] == 'series':
 					d['mode'] = 'listSeasons'
+					if 'imageSquare' in item:
+						d['fallbackimage'] = item['imageSquare']
 				elif item['type'] == 'format':
 					d['mode'] = 'listVideos'
 				
@@ -66,7 +68,7 @@ def parseMain():
 	return l
 	
 	
-def parseSeasons(id):
+def parseSeasons(id, params):
 	#response = libMediathek.getUrl(base+'/content/playlists/filter/?channelId=' + id + '&secondarySort=alias,ASC',header)
 	#https://www.funk.net/api/v3.1/webapp/playlists/byChannelAlias/alles-liebe-annette?sort=language,ASC
 	url = webbase + 'seasons/byChannelAlias/' + id
@@ -81,6 +83,9 @@ def parseSeasons(id):
 			d['_plot'] = item['shortDescription']
 		if 'description' in item:
 			d['_plot'] = item['description']
+		if 'fallbackimage' in params:
+			imgurl = base + '/thumbnails/' + params['fallbackimage'] + '?quality=85&width=244'
+			d['_thumb'] = imgurl
 		d['_type'] = 'season'
 		d['id'] = item['alias']
 		d['mode'] = 'listEpisodes'

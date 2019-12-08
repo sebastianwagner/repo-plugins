@@ -9,7 +9,7 @@ def main():
 	return jsonParser.parseMain()
 	
 def listSeasons():
-	return jsonParser.parseSeasons(params['id'])
+	return jsonParser.parseSeasons(params['id'], params)
 	
 def listEpisodes():
 	return jsonParser.parseEpisodes(params['id'])
